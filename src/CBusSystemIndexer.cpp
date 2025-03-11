@@ -4,6 +4,19 @@
 #include <vector>
 #include <stdexcept>
 #include <unordered_map>
+#include <algorithm>
+#include <string>
+
+struct pair_hash
+        {
+            template <class T1, class T2>
+            std::size_t operator()(const std::pair<T1, T2> &p) const
+            {
+                auto h1 = std::hash<T1>{}(p.first);
+                auto h2 = std::hash<T2>{}(p.second);
+                return h1 ^ h2;
+            }
+        };
 
 struct CBusSystemIndexer::SImplementation
 {
@@ -17,22 +30,13 @@ struct CBusSystemIndexer::SImplementation
     {
         bus = bussystem;
         // https://stackoverflow.com/questions/32685540/why-cant-i-compile-an-unordered-map-with-a-pair-as-key
-        struct pair_hash
-        {
-            template <class T1, class T2>
-            std::size_t operator()(const std::pair<T1, T2> &p) const
-            {
-                auto h1 = std::hash<T1>{}(p.first);
-                auto h2 = std::hash<T2>{}(p.second);
-                return h1 ^ h2;
-            }
-        };
+        
 
-        for (int i = 0; i < routes.size(); i++)
+        for (std::size_t i = 0; i < routes.size(); i++)
         {
-            for (int j = 0; j < routes[i].size() - 1; j++)
+            for (std::size_t j = 0; j < routes[i].size() - 1; j++)
             {
-                for (int k = j + 1; k < routes[i].size(); k++)
+                for (std::size_t k = j + 1; k < routes[i].size(); k++)
                 {
                     auto key = std::make_pair(routes[i][j], routes[i][k]);
                     if (table.find(key) != table.end())
@@ -41,21 +45,21 @@ struct CBusSystemIndexer::SImplementation
                     }
                     else
                     {
-                        a = std::vector<string>;
+                        std::vector<std::string> a;
                         a.push_back(routes[i]);
-                        table[key, a];
+                        table[key] = a;
                     }
                 }
             }
         }
 
-        for (int i = 0; i < bussystem->stops.size(); i++)
+        for (std::size_t i = 0; i < bussystem->stops.size(); i++)
         {
             stopIDlist.push_back(bussystem->stops[i]->nodeid);
         }
         std::sort(stopIDlist.begin(), stopIDlist.end());
 
-        for (int i = 0; i < bussystem->routes.size(); i++)
+        for (std::size_t i = 0; i < bussystem->routes.size(); i++)
         {
             routeNamelist.push_back(bussystem->routes[i]->name);
         }
