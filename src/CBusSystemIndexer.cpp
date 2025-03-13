@@ -1,13 +1,18 @@
-#include "CSVBusSystem.h"
-#include "BusSystem.h"
 #include "BusSystemIndexer.h"
+#include "XMLReader.h"
+#include "DSVReader.h"
+#include "StringUtils.h"
+#include "StringDataSource.h"
+#include "CSVBusSystem.h"
 #include <vector>
 #include <stdexcept>
-#include <unordered_map>
 #include <algorithm>
-#include <string>
+#include <unordered_map>
+#include <iostream>
 
-struct pair_hash
+struct CBusSystemIndexer::SImplementation
+{
+    struct pair_hash
         {
             template <class T1, class T2>
             std::size_t operator()(const std::pair<T1, T2> &p) const
@@ -18,55 +23,51 @@ struct pair_hash
             }
         };
 
-struct CBusSystemIndexer::SImplementation
-{
-
     std::vector<TNodeID> stopIDlist;
     std::vector<std::string> routeNamelist;
     std::shared_ptr<CBusSystem> bus;
-    std::unordered_map<std::pair<TNodeID, TNodeID>, std::vector<std::string>> table;
+    std::unordered_map<std::pair<TNodeID, TNodeID>, std::unordered_set< std::shared_ptr<SRoute> >> table;
 
-    CBusSystemIndexer(std::shared_ptr<CBusSystem> bussystem)
+    SImplementation(std::shared_ptr<CBusSystem> bussystem)
     {
         bus = bussystem;
         // https://stackoverflow.com/questions/32685540/why-cant-i-compile-an-unordered-map-with-a-pair-as-key
         
 
-        for (std::size_t i = 0; i < routes.size(); i++)
+        for (std::size_t i = 0; i < bussystem->RouteCount(); i++)
         {
-            for (std::size_t j = 0; j < routes[i].size() - 1; j++)
+            auto currRoute = bussystem->RouteByIndex(i);
+            routeNamelist.push_back(currRoute->Name());
+
+            for (std::size_t j = 0; j < bussystem->RouteByIndex(i)->StopCount() - 1; j++)
             {
-                for (std::size_t k = j + 1; k < routes[i].size(); k++)
+                for (std::size_t k = j + 1; k < bussystem->RouteByIndex(i)->StopCount(); k++)
                 {
-                    auto key = std::make_pair(routes[i][j], routes[i][k]);
+                    
+                    auto src = bussystem->StopByID(currRoute->GetStopID(j))->NodeID();
+                    auto dest = bussystem->StopByID(currRoute->GetStopID(k))->NodeID();
+                    
+                    auto key = std::make_pair(src, dest);
+                    
                     if (table.find(key) != table.end())
                     {
-                        table[key].push_back(routes[i]);
+                        table[key].insert(currRoute);
                     }
                     else
                     {
-                        std::vector<std::string> a;
-                        a.push_back(routes[i]);
-                        table[key] = a;
+                        table[key] = {currRoute};
                     }
                 }
             }
         }
 
-        for (std::size_t i = 0; i < bussystem->stops.size(); i++)
+        for (std::size_t i = 0; i < bussystem->StopCount(); i++)
         {
-            stopIDlist.push_back(bussystem->stops[i]->nodeid);
+            stopIDlist.push_back(bussystem->StopByIndex(i)->NodeID());
         }
         std::sort(stopIDlist.begin(), stopIDlist.end());
-
-        for (std::size_t i = 0; i < bussystem->routes.size(); i++)
-        {
-            routeNamelist.push_back(bussystem->routes[i]->name);
-        }
         std::sort(routeNamelist.begin(), routeNamelist.end());
     }
-
-    ~CBusSystemIndexer();
 
     std::size_t StopCount() const noexcept
     {
@@ -104,10 +105,54 @@ struct CBusSystemIndexer::SImplementation
     }
     bool RoutesByNodeIDs(TNodeID src, TNodeID dest, std::unordered_set<std::shared_ptr<SRoute>> &routes) const noexcept
     {
-        return table[src, dest];
+        auto key = std::make_pair(src, dest);
+        auto find = table.find(key);
+        
+        if (find != table.end()) 
+        {
+            routes = find->second;
+            return true;
+        }
+
+        return false;
     }
     bool RouteBetweenNodeIDs(TNodeID src, TNodeID dest) const noexcept
     {
-        return table[src, dest];
+        auto key = std::make_pair(src, dest);
+        return (table.find(key) != table.end());
     }
 };
+
+CBusSystemIndexer::CBusSystemIndexer(std::shared_ptr<CBusSystem> bussystem) {
+	DImplementation = std::make_unique<SImplementation>(bussystem);
+}
+
+CBusSystemIndexer::~CBusSystemIndexer() {}
+
+std::size_t CBusSystemIndexer::StopCount() const noexcept {
+	return DImplementation->StopCount();
+}
+
+std::size_t CBusSystemIndexer::RouteCount() const noexcept {
+	return DImplementation->RouteCount();
+}
+
+std::shared_ptr<CBusSystem::SStop> CBusSystemIndexer::SortedStopByIndex(std::size_t index) const noexcept {
+	return DImplementation->SortedStopByIndex(index);
+}
+
+std::shared_ptr<CBusSystem::SRoute> CBusSystemIndexer::SortedRouteByIndex(std::size_t index) const noexcept {
+	return DImplementation->SortedRouteByIndex(index);
+}
+
+std::shared_ptr<CBusSystem::SStop> CBusSystemIndexer::StopByNodeID(CStreetMap::TNodeID id) const noexcept {
+	return DImplementation->StopByNodeID(id);
+}
+
+bool CBusSystemIndexer::RoutesByNodeIDs(CStreetMap::TNodeID src, CStreetMap::TNodeID dest, std::unordered_set<std::shared_ptr<CBusSystem::SRoute> > &routes) const noexcept {
+	return DImplementation->RoutesByNodeIDs(src, dest, routes);
+}
+
+bool CBusSystemIndexer::RouteBetweenNodeIDs(CStreetMap::TNodeID src, CStreetMap::TNodeID dest) const noexcept {
+	return DImplementation->RouteBetweenNodeIDs(src, dest);
+}
