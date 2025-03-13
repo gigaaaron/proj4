@@ -55,7 +55,51 @@ struct CDijkstraPathRouter::SImplementation {
 		return false;
 	}
 
-	double FindShortestPath(TVertexID src, TVertexID dest, std::vector<TVertexID> &path) noexcept { // THIS IS FOR YOU :D 
+	double FindShortestPath(TVertexID src, TVertexID dest, std::vector<TVertexID> &path) noexcept { 
+		std::unordered_map<TVertexID, double> d;
+		std::unordered_map<TVertexID, TVertexID> pi;
+		std::priority_queue<std::pair<double, TVertexID>, std::vector<std::pair<double, TVertexID>>, std::greater<>> Q;
+
+		std::size_t V = VertexCount();
+
+		for (std::size_t i = 0; i < V - 1; i++)
+		{
+			d[i] = std::numeric_limits<double>::max();
+			pi[i] = NULL;
+		}
+		d[src] = 0;
+
+		Q.push(std::make_pair(0, src));
+
+		while (!Q.empty())
+		{
+			TVertexID u = Q.top().second;
+			Q.pop();
+			
+			auto& edges = vertices[u]->edges;
+
+			for (size_t i = 0; i < edges.size() - 1; i++)
+			{
+				TVertexID v = edges[i].first;
+				double weight = edges[i].second;
+
+				if (d[v] > d[u] + weight)
+				{
+					d[v] = d[u] + weight;
+					pi[v] = u;
+					Q.push(std::make_pair(d[v], v));
+				}
+			}
+		}
+
+		TVertexID current = dest;
+		while (current != NULL)
+		{
+			path.insert(path.begin(), current);
+			current = pi[current];
+		}
+
+		return d[dest];
   }
 
 };
