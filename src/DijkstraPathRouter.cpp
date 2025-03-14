@@ -27,7 +27,7 @@ struct CDijkstraPathRouter::SImplementation {
 	TVertexID AddVertex(std::any tag) noexcept
 	{
 		vertices.push_back(std::make_shared<Vertex>(tag));
-		return VertexCount();
+		return VertexCount() - 1;
 	}
 
 	std::any GetVertexTag(TVertexID id) const noexcept
@@ -43,7 +43,7 @@ struct CDijkstraPathRouter::SImplementation {
 	}
 
 	bool AddEdge(TVertexID src, TVertexID dest, double weight, bool bidir) noexcept {
-		if (src <= VertexCount() && dest <= VertexCount()) 
+		if (src < VertexCount() && dest < VertexCount()) 
 		{
 			vertices[src]->edges.insert({dest, weight});
 
