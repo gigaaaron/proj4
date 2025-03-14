@@ -134,7 +134,15 @@ struct CDijkstraTransportationPlanner::SImplementation {
 
 	std::shared_ptr<CStreetMap::SNode> SortedNodeByIndex(std::size_t index) const noexcept
 	{
-		// try shit
+		try
+		{
+			return map->NodeByID(sortednodes.at(index));
+		}
+		catch (const std::out_of_range &excpt)
+		{
+			return nullptr;
+		}
+	}
 	}
 
 	double FindShortestPath(TNodeID src, TNodeID dest, std::vector<TNodeID> &path) 
