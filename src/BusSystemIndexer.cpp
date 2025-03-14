@@ -1,9 +1,9 @@
 #include "BusSystemIndexer.h"
+#include "CSVBusSystem.h"
 #include "XMLReader.h"
 #include "DSVReader.h"
-#include "StringUtils.h"
 #include "StringDataSource.h"
-#include "CSVBusSystem.h"
+#include "StringUtils.h"
 #include <vector>
 #include <stdexcept>
 #include <algorithm>
@@ -25,9 +25,10 @@ struct CBusSystemIndexer::SImplementation
     };
 
     std::vector<TNodeID> stopIDlist;
+    std::unordered_map<TNodeID, CBusSystem::TStopID> stops;
     std::vector<std::string> routeNamelist;
     std::shared_ptr<CBusSystem> bus;
-    std::unordered_map<std::pair<TNodeID, TNodeID>, std::unordered_set< std::shared_ptr<SRoute> >> table;
+    std::unordered_map<std::pair<TNodeID, TNodeID>, std::unordered_set< std::shared_ptr<SRoute> >, pair_hash > table;
 
     SImplementation(std::shared_ptr<CBusSystem> bussystem)
     {
@@ -63,6 +64,7 @@ struct CBusSystemIndexer::SImplementation
         for (std::size_t i = 0; i < bussystem->StopCount(); i++)
         {
             stopIDlist.push_back(bussystem->StopByIndex(i)->NodeID());
+            stops[bussystem->StopByIndex(i)->NodeID()] = bussystem->StopByIndex(i)->ID();
         }
         std::sort(stopIDlist.begin(), stopIDlist.end());
         std::sort(routeNamelist.begin(), routeNamelist.end());
@@ -78,9 +80,10 @@ struct CBusSystemIndexer::SImplementation
     }
     std::shared_ptr<SStop> SortedStopByIndex(std::size_t index) const noexcept
     {
+        
         try
         {
-            return bus->StopByID(stopIDlist.at(index));
+            return bus->StopByID(stops.at(stopIDlist.at(index)));
         }
         catch (const std::out_of_range &excpt)
         {
@@ -100,7 +103,7 @@ struct CBusSystemIndexer::SImplementation
     }
     std::shared_ptr<SStop> StopByNodeID(TNodeID id) const noexcept
     {
-        return bus->StopByID(id);
+        return bus->StopByID(stops.at(id));
     }
     bool RoutesByNodeIDs(TNodeID src, TNodeID dest, std::unordered_set<std::shared_ptr<SRoute>> &routes) const noexcept
     {
