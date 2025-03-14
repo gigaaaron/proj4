@@ -63,10 +63,10 @@ struct CDijkstraPathRouter::SImplementation {
 
 		std::size_t V = VertexCount();
 
-		for (std::size_t i = 0; i < V - 1; i++)
+		for (std::size_t i = 0; i < V; i++)
 		{
 			d[i] = std::numeric_limits<double>::max();
-			pi[i] = NULL;
+			pi[i] = -1;
 		}
 		d[src] = 0;
 
@@ -79,10 +79,10 @@ struct CDijkstraPathRouter::SImplementation {
 			
 			auto& edges = vertices[u]->edges;
 
-			for (size_t i = 0; i < edges.size() - 1; i++)
+			for (const auto& edge : edges)
 			{
-				TVertexID v = edges[i].first;
-				double weight = edges[i].second;
+				TVertexID v = edge.first;
+				double weight = edge.second;
 
 				if (d[v] > d[u] + weight)
 				{
@@ -94,7 +94,7 @@ struct CDijkstraPathRouter::SImplementation {
 		}
 
 		TVertexID current = dest;
-		while (current != NULL)
+		while (current != -1)
 		{
 			path.insert(path.begin(), current);
 			current = pi[current];
