@@ -165,39 +165,42 @@ struct CDijkstraTransportationPlanner::SImplementation {
 
 	double FindFastestPath(TNodeID src, TNodeID dest, std::vector< TTripStep > &path)
 	{
-		// Find vertex ID
-		CPathRouter::TVertexID srcVertex = std::find(nodes.begin(), nodes.end(), map->NodeByID(src)) - nodes.begin();
-		CPathRouter::TVertexID destVertex = std::find(nodes.begin(), nodes.end(), map->NodeByID(dest)) - nodes.begin();
+		CPathRouter::TVertexID srcVertexID = std::find(sortedNodeIDs.begin(), sortedNodeIDs.end(), src) - sortedNodeIDs.begin();
+		CPathRouter::TVertexID destVertexID = std::find(sortedNodeIDs.begin(), sortedNodeIDs.end(), dest) - sortedNodeIDs.begin();SIZE_MAX;
 
-		if (srcVertex == nodes.size() || destVertex == nodes.size())
+
+		if (srcVertexID == sortedNodeIDs.size() || destVertexID == sortedNodeIDs.size())
 			return CPathRouter::NoPathExists;
 		
-		// Calculate bike and bus/walk time to compare
-		std::vector<TNodeID> bikepath, buswalkpath;
-		double biketime = fastestBike->FindShortestPath(srcVertex, destVertex, bikepath);
-		double buswalktime = fastestBusWalk->FindShortestPath(srcVertex, destVertex, buswalkpath);
+		std::vector<TNodeID> bikePath;
+		std::vector<TNodeID> busWalkPath;
+		double bikeTime = fastestBike->FindShortestPath(srcVertexID, destVertexID, bikePath);
+		double busWalkTime = fastestBusWalk->FindShortestPath(srcVertexID, destVertexID, busWalkPath);
 
-		if (biketime < buswalktime)
-		{
-			for (int i = 0; i < bikepath.size(); i++) 
-				path.push_back({ETransportationMode::Bike, nodes[bikepath[i]]});
 		
-			return biketime;
-		} 
-		else
-		{
-			for (int i = 1; i < buswalkpath.size(); i++) {
-				TNodeID src = nodes[buswalkpath[i - 1]];
-				TNodeID dest = nodes[buswalkpath[i]];
-				
-				auto walktime = Weight(src, dest, true, walkspeed);
-				if (bus->RouteBetweenNodeIDs(src, dest) && stoptime < walktime)
-					path.push_back({ETransportationMode::Bus, nodes[buswalkpath[i]]});
-				else
-					path.push_back({ETransportationMode::Walk, nodes[buswalkpath[i]]});
-			}
-			return buswalktime;
+		if (bikeTime < busWalkTime) {
+			for (size_t i = 0; i < bikePath.size(); i++)
+				path.push_back({ETransportationMode::Bike, VertexToNodes[bikePath[i]]});
+			
+			return bikeTime;
 		}
+		
+		else if (busWalkTime < bikeTime) {
+			path.push_back({ETransportationMode::Walk, VertexToNodes[busWalkPath[0]]});
+			
+			for (size_t i = 1; i < busWalkPath.size(); i++) {
+				TNodeID prev = VertexToNodes[busWalkPath[i-1]];
+				TNodeID curr = VertexToNodes[busWalkPath[i]];
+
+				// Use bus for this edge if a bus route exists
+				if (busIndexer->RouteBetweenNodeIDs(prev, curr))
+					path.push_back({ETransportationMode::Bus, VertexToNodes[busWalkPath[i]]});
+				else
+					path.push_back({ETransportationMode::Walk, VertexToNodes[busWalkPath[i]]});
+			}
+			return busWalkTime;
+		}
+
 		return CPathRouter::NoPathExists;
 	}
 
