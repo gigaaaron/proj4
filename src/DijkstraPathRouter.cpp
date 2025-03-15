@@ -65,7 +65,7 @@ struct CDijkstraPathRouter::SImplementation {
 
 		for (std::size_t i = 0; i < V; i++)
 		{
-			d[i] = std::numeric_limits<double>::max();
+			d[i] = NoPathExists;
 			pi[i] = -1;
 		}
 		d[src] = 0;
@@ -77,12 +77,12 @@ struct CDijkstraPathRouter::SImplementation {
 			TVertexID u = Q.top().second;
 			Q.pop();
 			
-			auto& edges = vertices[u]->edges;
+			auto edges = vertices[u]->edges;
 
-			for (const auto& edge : edges)
+			for (const auto [Vertex, Weight] : edges)
 			{
-				TVertexID v = edge.first;
-				double weight = edge.second;
+				TVertexID v = Vertex;
+				double weight = Weight;
 
 				if (d[v] > d[u] + weight)
 				{
@@ -135,4 +135,3 @@ bool CDijkstraPathRouter::Precompute(std::chrono::steady_clock::time_point deadl
 double CDijkstraPathRouter::FindShortestPath(TVertexID src, TVertexID dest, std::vector<TVertexID> &path) noexcept {
 	return DImplementation->FindShortestPath(src, dest, path);
 }
-
