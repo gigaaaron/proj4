@@ -1,15 +1,15 @@
 # Overview
 Interface for path router
 
-## Constructor
+### Constructor
 Initalize an instance of CDijkstraPathRouter class
-## Vertex
+### Vertex
 Respresents a vertex in a graph. It stores a tag and a map of all adjacent edges with associated weights
-## VertexID
+### VertexID
 Stored as TVertexID.
-## Edge Weight
+### Edge Weight
 Represented by a double.
-## Bidirectional Edges
+### Bidirectional Edges
 When bidir is set to true, one edge is added for each direction.
 
 ## Methods
